@@ -30,40 +30,66 @@ impl MLFQ {
         // TODO: Implement this function
         // Add the process to the appropriate queue based on its priority
         // Ensure the priority is within the valid range (0 to num_levels - 1)
+        // This function adds a process to a queue based on its priority level.
+        // The queues are managed by priority, with higher priorities processed first.
+    
+        // Determine the process priority, ensuring it is within valid bounds.
         let priority = if process.priority < self.num_levels {
-            process.priority
+            process.priority  // Use the process's priority if it is within the allowed range.
         } else {
-            self.num_levels - 1 // Lowest priority if out of bounds
+            self.num_levels - 1 // If the priority is too high, assign it to the lowest priority queue.
         };
-        
+    
+        // Add the process to the appropriate priority queue.
         self.queues[priority].push(process);
     }
 
-    // Exercise 2: Process Execution
     pub fn execute_process(&mut self, queue_index: usize) {
         // TODO: Implement this function
         // Execute the process for its time quantum or until completion
         // Update remaining_time, total_executed_time, and current_time
         // Move the process to a lower priority queue if it doesn't complete
+        // This function handles the execution of a process from the specified queue.
+        // It will run the process for its allocated time quantum or until the process finishes.
+    
         if let Some(mut process) = self.queues[queue_index].pop() {
+            // Check if there is a process to execute in the queue.
+            // Remove (pop) the process from the queue to execute it.
+    
             let quantum = self.time_quanta[queue_index];
-            let execution_time = quantum.min(process.remaining_time);
+            // Get the time quantum for this priority level.
             
-            // Update process time
+            let execution_time = quantum.min(process.remaining_time);
+            // Determine how much time to execute: either the quantum or the remaining process time,
+            // whichever is smaller, to avoid over-executing the process.
+    
+            // Update the process's remaining execution time.
             process.remaining_time -= execution_time;
+            
+            // Track the total time the process has been executed so far.
             process.total_executed_time += execution_time;
+            
+            // Update the system's current time based on the execution time of this process.
             self.current_time += execution_time;
     
-            // Process completion check
+            // Check if the process has completed.
             if process.remaining_time > 0 {
-                // Move to lower queue if possible
+                // If the process hasn't completed, move it to a lower-priority queue.
+                
                 let new_priority = (process.priority + 1).min(self.num_levels - 1);
+                // Calculate the new priority, ensuring it doesn't exceed the lowest priority queue.
+                
                 process.priority = new_priority;
+                // Update the process's priority to the lower level.
+    
                 self.queues[new_priority].push(process);
+                // Add the process back into the lower-priority queue.
             } else {
-                // Process has completed, no further action needed
+                // If the process has completed, no further action is needed.
+                // The process is not added back into any queue since it's finished.
             }
         }
+        // If no process was available in the queue, the function simply exits without doing anything.
     }
 
     // Exercise 3: Priority Boost
@@ -71,20 +97,28 @@ impl MLFQ {
         // TODO: Implement this function
         // Move all processes to the highest priority queue
         // Reset the priority of all processes to 0
+        // This function performs a priority boost by moving all processes 
+        // from lower-priority queues to the highest-priority queue (queue 0).
+        // It resets the priority of all processes to 0.
+
         let mut boosted_processes = Vec::new();
+        // Create a temporary vector to hold all the processes that will be boosted.
+        
+        // Collect all processes from lower priority queues (queues 1 and below).
+        for queue in &mut self.queues[1..] {
+            boosted_processes.append(queue);
+            // Move all the processes from each lower queue into the `boosted_processes` vector.
+        }
 
-    // Collect all processes from lower queues
-    for queue in &mut self.queues[1..] {
-        boosted_processes.append(queue); // Move processes to `boosted_processes`
-    }
+        // Reset the priority of all the collected processes.
+        for process in boosted_processes.iter_mut() {
+            process.priority = 0;
+            // Set the priority of each process to 0, which is the highest priority.
+        }
 
-    // Reset the priority of all boosted processes
-    for process in boosted_processes.iter_mut() {
-        process.priority = 0;
-    }
-
-    // Place all boosted processes into the highest priority queue (queue 0)
-    self.queues[0].append(&mut boosted_processes);
+        // Add all the boosted processes into the highest-priority queue (queue 0).
+        self.queues[0].append(&mut boosted_processes);
+        // Move the boosted processes into queue 0, leaving the temporary vector empty.
     }
 
     // Simulate time passing and trigger a boost if needed
